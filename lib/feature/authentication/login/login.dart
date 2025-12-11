@@ -1,6 +1,9 @@
+import 'dart:developer';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:movie_app/core/UI_Utils.dart';
 import 'package:movie_app/core/resourses/app_colors.dart';
 import 'package:movie_app/feature/firebase/firebase_service.dart';
@@ -192,7 +195,10 @@ class _LoginState extends State<Login> {
                       height: 50.h,
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _googleSignIn,
+                        onPressed:() {_googleSignIn();
+                        Navigator.pushReplacementNamed(
+                            context, AppRoutes.homeScreen);
+                          },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.yellow,
                           shape: RoundedRectangleBorder(
@@ -238,7 +244,28 @@ class _LoginState extends State<Login> {
     });
   }
   Future<void>_googleSignIn()async{
+    try
+    {
+      final GoogleSignIn googleSignIn=GoogleSignIn.instance;
+      await googleSignIn.initialize(
 
+        serverClientId:"418200830858-m23vg8ir7kjsd6orn3o6utl4p19b5eup.apps.googleusercontent.com",
+      );
+      final GoogleSignInAccount? googleUser = await googleSignIn.authenticate();
+      if(googleUser==null)return;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
+       UserCredential firebaseUser=await FirebaseAuth.instance.signInWithCredential(credential);
+      UserModel finalUser = UserModel(
+          id: firebaseUser.user?.uid?? " ",
+          email:firebaseUser.user?.email ??"No email provided", name: firebaseUser.user?.displayName ?? "No name provided"
+      );
+      await FirebaseServices.addUserToFireStore(finalUser);
+
+    }catch(exception){
+      log(exception.toString());
+    }
   }
 
   void _login()async {
